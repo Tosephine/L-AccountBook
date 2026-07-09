@@ -589,6 +589,11 @@
       border-color: var(--primary);
       box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.13);
     }
+    input[readonly] {
+      cursor: default;
+      background: var(--field-group-bg);
+      opacity: 0.8;
+    }
     textarea {
       min-height: 36px;
       resize: vertical;
@@ -1344,7 +1349,7 @@
       justify-content: center;
     }
 
-    /* ===== 小票预览（最终修复版） ===== */
+    /* ===== 小票预览（最终修复版 - 使用flex布局保证内容完整） ===== */
     .receipt-preview-overlay {
       display: none;
       position: fixed;
@@ -1370,7 +1375,7 @@
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
       font-family: "Noto Sans SC", "思源黑体", sans-serif;
       position: relative;
-      overflow: visible !important; /* 确保内容不裁剪 */
+      overflow: visible !important;
       font-size: 13px;
       line-height: 1.6;
       box-sizing: border-box;
@@ -1402,31 +1407,39 @@
       margin: 8px 0;
     }
 
-    /* 表格：强制占满容器，三列等宽 */
-    .receipt-preview-box .receipt-table {
-      width: 100% !important;
-      table-layout: fixed !important;
-      border-collapse: collapse;
+    /* 使用flex布局模拟表格，保证每行高度自适应且内容完整显示 */
+    .receipt-preview-box .receipt-table-flex {
+      display: flex;
+      flex-direction: column;
+      width: 100%;
       margin: 4px 0;
-      min-width: 0 !important; /* 防止溢出 */
+      border: none;
     }
-    .receipt-preview-box .receipt-table th,
-    .receipt-preview-box .receipt-table td {
-      width: 33.33% !important;
-      text-align: center !important;
-      padding: 6px 4px;
+    .receipt-preview-box .receipt-table-flex .receipt-row {
+      display: flex;
+      width: 100%;
       border-bottom: 1px dashed #ddd;
-      word-break: break-word;
-      overflow-wrap: break-word;
-      hyphens: auto;
-      line-height: 1.4;
-      box-sizing: border-box;
+      min-height: 50px;
     }
-    .receipt-preview-box .receipt-table th {
-      font-weight: 700;
-      color: #333;
+    .receipt-preview-box .receipt-table-flex .receipt-row.header {
       border-bottom: 2px dashed #ccc;
       background: #fafafa;
+      font-weight: 700;
+      color: #333;
+    }
+    .receipt-preview-box .receipt-table-flex .receipt-cell {
+      flex: 1;
+      text-align: center;
+      padding: 14px 8px;
+      word-break: break-word;
+      overflow-wrap: break-word;
+      line-height: 1.8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .receipt-preview-box .receipt-table-flex .receipt-cell:not(:last-child) {
+      border-right: 1px dashed #e0e0e0;
     }
 
     .receipt-preview-box .receipt-info-grid {
@@ -1463,17 +1476,21 @@
       border-top: 2px dashed #ccc;
       margin-top: 4px;
     }
-    /* 图片：不压缩，宽度不超过容器，高度自适应 */
+    /* 图片：完整显示，大小适中，不压缩 */
     .receipt-preview-box .receipt-img {
       margin: 8px 0 6px 0;
       text-align: center;
+      display: block;
     }
     .receipt-preview-box .receipt-img img {
       max-width: 100%;
+      max-height: 280px;      /* 适中大小，不压缩表格 */
       height: auto;
+      width: auto;
       border-radius: 6px;
       border: 1px solid #ddd;
       display: inline-block;
+      object-fit: contain;
     }
     .receipt-preview-box .receipt-footer {
       text-align: center;
@@ -1648,17 +1665,17 @@
       .receipt-preview-box .receipt-title {
         font-size: 18px;
       }
-      .receipt-preview-box .receipt-table {
+      .receipt-preview-box .receipt-table-flex .receipt-cell {
+        padding: 12px 6px;
         font-size: 12px;
-      }
-      .receipt-preview-box .receipt-table th,
-      .receipt-preview-box .receipt-table td {
-        font-size: 12px;
-        padding: 4px 3px;
+        line-height: 1.6;
       }
       .receipt-preview-box .receipt-info-grid {
         font-size: 11.5px;
         grid-template-columns: 1fr 1fr;
+      }
+      .receipt-preview-box .receipt-img img {
+        max-height: 220px;
       }
       .filter-bar select,
       .filter-bar input {
@@ -1708,13 +1725,10 @@
       .receipt-preview-box .receipt-title {
         font-size: 16px;
       }
-      .receipt-preview-box .receipt-table {
+      .receipt-preview-box .receipt-table-flex .receipt-cell {
+        padding: 10px 4px;
         font-size: 11px;
-      }
-      .receipt-preview-box .receipt-table th,
-      .receipt-preview-box .receipt-table td {
-        font-size: 11px;
-        padding: 3px 2px;
+        line-height: 1.5;
       }
       .receipt-preview-box .receipt-info-grid {
         font-size: 10.5px;
@@ -1723,6 +1737,9 @@
       }
       .receipt-preview-box .receipt-total {
         font-size: 13px;
+      }
+      .receipt-preview-box .receipt-img img {
+        max-height: 180px;
       }
     }
 
@@ -1851,7 +1868,7 @@
             <div class="card-header">
                 <div class="card-title-wrap">
                     <h2>➕ 添加 / 编辑记录</h2>
-                    <p>金额为必填，其他可选。</p>
+                    <p>单价为必填，总价自动计算。</p>
                 </div>
             </div>
             <div id="editingNotice" class="editing-notice">正在编辑一条旧记录，修改后点击"保存修改"。</div>
@@ -1880,8 +1897,9 @@
                         </div>
                     </label>
                     <label>日期 <input id="date" type="date" /></label>
-                    <label>金额（必填） <input id="amount" type="number" min="0" step="0.01" placeholder="128.00" required /></label>
-                    <label>数量 <input id="quantity" type="number" min="1" step="1" value="1" /></label>
+                    <label>单价（必填） <input id="unitPrice" type="number" min="0" step="0.01" placeholder="128.00" required oninput="calculateTotal()" /></label>
+                    <label>数量 <input id="quantity" type="number" min="1" step="1" value="1" oninput="calculateTotal()" /></label>
+                    <label>总价 <input id="totalAmount" type="text" readonly style="background:var(--field-group-bg);cursor:default;font-weight:700;color:var(--primary-dark);" /></label>
                 </div>
             </div>
 
@@ -2038,7 +2056,7 @@
                 <button class="btn-secondary btn-sm" onclick="clearFilters()">清除筛选</button>
             </div>
             <div class="table-wrapper">
-                <table><thead><tr><th>图</th><th>日期</th><th>项目</th><th>分类</th><th>金额</th><th>数量</th><th>平台</th><th>店铺</th><th>用途</th><th>状态</th><th>备注</th><th>操作</th></tr></thead>
+                <table><thead><tr><th>图</th><th>日期</th><th>项目</th><th>分类</th><th>单价</th><th>数量</th><th>总价</th><th>平台</th><th>店铺</th><th>用途</th><th>状态</th><th>操作</th></tr></thead>
                     <tbody id="recordTableBody"></tbody></table>
             </div>
             <div class="record-cards" id="recordCardList" style="margin-top:14px;"></div>
@@ -2052,27 +2070,27 @@
             <!-- 图表区域 -->
             <div class="chart-row">
                 <div class="card" style="padding:12px;margin-bottom:0;">
-                    <h3 style="font-size:14px;margin-bottom:6px;">按分类消费金额</h3>
+                    <h3 style="font-size:14px;margin-bottom:6px;">按分类消费金额（总价）</h3>
                     <div class="chart-container"><canvas id="categoryChart"></canvas></div>
                 </div>
                 <div class="card" style="padding:12px;margin-bottom:0;">
-                    <h3 style="font-size:14px;margin-bottom:6px;">按分类消费占比</h3>
+                    <h3 style="font-size:14px;margin-bottom:6px;">按分类消费占比（总价）</h3>
                     <div class="chart-container"><canvas id="categoryPieChart"></canvas></div>
                 </div>
             </div>
             <div class="summary-grid">
-                <div class="summary-box"><h3>按分类</h3><ul id="categorySummary"></ul></div>
-                <div class="summary-box"><h3>按平台</h3><ul id="platformSummary"></ul></div>
-                <div class="summary-box"><h3>按店铺</h3><ul id="shopSummary"></ul></div>
-                <div class="summary-box"><h3>按用途</h3><ul id="purposeSummary"></ul></div>
-                <div class="summary-box"><h3>按状态</h3><ul id="statusSummary"></ul></div>
-                <div class="summary-box"><h3>按付款方式</h3><ul id="paymentSummary"></ul></div>
+                <div class="summary-box"><h3>按分类（总价）</h3><ul id="categorySummary"></ul></div>
+                <div class="summary-box"><h3>按平台（总价）</h3><ul id="platformSummary"></ul></div>
+                <div class="summary-box"><h3>按店铺（总价）</h3><ul id="shopSummary"></ul></div>
+                <div class="summary-box"><h3>按用途（总价）</h3><ul id="purposeSummary"></ul></div>
+                <div class="summary-box"><h3>按状态（总价）</h3><ul id="statusSummary"></ul></div>
+                <div class="summary-box"><h3>按付款方式（总价）</h3><ul id="paymentSummary"></ul></div>
             </div>
         </div>
         <div class="card">
-            <div class="card-header"><div class="card-title-wrap"><h2>📅 月度统计</h2></div></div>
+            <div class="card-header"><div class="card-title-wrap"><h2>📅 月度统计（总价）</h2></div></div>
             <div class="table-wrapper" style="max-height:340px;">
-                <table><thead><tr><th>月份</th><th>金额</th><th>数量</th><th>记录条数</th></tr></thead>
+                <table><thead><tr><th>月份</th><th>总金额</th><th>总数量</th><th>记录条数</th></tr></thead>
                     <tbody id="monthlySummaryBody"></tbody></table>
             </div>
         </div>
@@ -2295,6 +2313,21 @@
 
         function getOptions(key) { return customOptions[key] || []; }
 
+        // 获取记录的单价（兼容旧数据）
+        function getUnitPrice(record) {
+            if (record.unitPrice !== undefined && record.unitPrice !== null && record.unitPrice !== '') {
+                return Number(record.unitPrice);
+            }
+            const qty = Number(record.quantity) || 1;
+            const amt = Number(record.amount) || 0;
+            return qty > 0 ? amt / qty : 0;
+        }
+
+        // 获取记录的总价
+        function getTotalAmount(record) {
+            return Number(record.amount) || 0;
+        }
+
         // ===== 自定义添加选项 =====
         function addOption(key, value) {
             if (!value) {
@@ -2417,6 +2450,17 @@
                 sel.appendChild(o);
             });
             if (current && sorted.includes(current)) sel.value = current;
+        }
+
+        // ============================================================
+        // 计算总价
+        // ============================================================
+        function calculateTotal() {
+            const unitPrice = Number(document.getElementById('unitPrice').value) || 0;
+            const quantity = Number(document.getElementById('quantity').value) || 1;
+            const total = unitPrice * quantity;
+            document.getElementById('totalAmount').value = total.toFixed(2);
+            return total;
         }
 
         // ============================================================
@@ -2679,7 +2723,7 @@
             const category = document.getElementById("categorySelect").value;
             const productCategory = document.getElementById("productCategory").value.trim();
             const date = document.getElementById("date").value;
-            const amount = Number(document.getElementById("amount").value);
+            const unitPrice = Number(document.getElementById("unitPrice").value);
             const quantity = Number(document.getElementById("quantity").value) || 1;
             const platform = document.getElementById("platform").value.trim();
             const shop = document.getElementById("shopSelect").value;
@@ -2690,14 +2734,17 @@
             const groupNumber = document.getElementById("groupNumber").value.trim();
             const link = document.getElementById("linkInput").value.trim();
 
-            if (isNaN(amount) || amount < 0) { showToast('请填写正确的金额（必填）', 'error'); return; }
+            if (isNaN(unitPrice) || unitPrice < 0) { showToast('请填写正确的单价（必填）', 'error'); return; }
+
+            const totalAmount = unitPrice * quantity;
 
             const recordData = {
                 productName,
                 category,
                 productCategory,
                 date,
-                amount,
+                unitPrice: unitPrice,
+                amount: totalAmount,
                 quantity,
                 platform,
                 shop,
@@ -2732,8 +2779,9 @@
             document.getElementById("categorySelect").value = "";
             document.getElementById("productCategory").value = "";
             document.getElementById("date").valueAsDate = new Date();
-            document.getElementById("amount").value = "";
+            document.getElementById("unitPrice").value = "";
             document.getElementById("quantity").value = 1;
+            document.getElementById("totalAmount").value = "";
             document.getElementById("platform").value = "";
             document.getElementById("shopSelect").value = "";
             document.getElementById("paymentMethodSelect").value = "";
@@ -2759,8 +2807,10 @@
             document.getElementById("categorySelect").value = r.category || "";
             document.getElementById("productCategory").value = r.productCategory || "";
             document.getElementById("date").value = r.date || "";
-            document.getElementById("amount").value = r.amount || "";
+            const unitPrice = getUnitPrice(r);
+            document.getElementById("unitPrice").value = unitPrice;
             document.getElementById("quantity").value = r.quantity || 1;
+            document.getElementById("totalAmount").value = (unitPrice * (r.quantity || 1)).toFixed(2);
             document.getElementById("platform").value = r.platform || "";
             document.getElementById("shopSelect").value = r.shop || "";
             document.getElementById("paymentMethodSelect").value = r.paymentMethod || "";
@@ -3000,20 +3050,21 @@
                 const thumb = r.imageData ?
                     `<img class="table-thumb" src="${r.imageData}" onclick="openImageViewer('${r.imageData}')" alt="图" />` :
                     `<div class="table-thumb-placeholder">无图</div>`;
-                const linkHtml = r.link ? `<a href="${r.link}" target="_blank">🔗</a>` : '';
+                const unitPrice = getUnitPrice(r);
+                const totalAmt = getTotalAmount(r);
                 const tr = document.createElement('tr');
                 tr.innerHTML = `
               <td>${thumb}</td>
               <td>${escapeHtml(r.date||'')}</td>
               <td>${escapeHtml(r.productName||'-')}</td>
               <td><span class="tag" onclick="filterByTag('category','${escapeHtml(r.category||'')}')">${escapeHtml(r.category||'-')}</span></td>
-              <td>${Number(r.amount||0).toFixed(2)}</td>
+              <td>${unitPrice.toFixed(2)}</td>
               <td>${r.quantity||0}</td>
+              <td>${totalAmt.toFixed(2)}</td>
               <td><span class="tag" onclick="filterByTag('platform','${escapeHtml(r.platform||'')}')">${escapeHtml(r.platform||'-')}</span></td>
               <td><span class="tag" onclick="filterByTag('shop','${escapeHtml(r.shop||'')}')">${escapeHtml(r.shop||'-')}</span></td>
               <td><span class="tag tag-green" onclick="filterByTag('purpose','${escapeHtml(r.purpose||'')}')">${escapeHtml(r.purpose||'-')}</span></td>
               <td><span class="tag ${r.status==='已收货'?'tag-delivery-done':'tag-delivery-pending'}" onclick="filterByTag('status','${escapeHtml(r.status||'')}')">${escapeHtml(r.status||'-')}</span></td>
-              <td>${escapeHtml(r.notes||'-')} ${linkHtml}</td>
               <td><button class="btn-green btn-sm" onclick="editRecord(${r.id})">编辑</button><button class="btn-danger btn-sm" onclick="deleteRecord(${r.id})">删除</button></td>
             `;
                 tbody.appendChild(tr);
@@ -3043,7 +3094,8 @@
                 const thumb = r.imageData ?
                     `<img class="record-card-thumb" src="${r.imageData}" onclick="openImageViewer('${r.imageData}')" alt="图" />` :
                     '';
-                const linkHtml = r.link ? `<a href="${r.link}" target="_blank">🔗</a>` : '';
+                const unitPrice = getUnitPrice(r);
+                const totalAmt = getTotalAmount(r);
                 const card = document.createElement('div');
                 card.className = `record-card ${r.status==='已收货'?'status-green':'status-gray'}`;
                 card.innerHTML = `
@@ -3052,8 +3104,9 @@
                 <div class="record-card-main">
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:6px;">
                     <div class="record-card-name">${escapeHtml(r.productName||'-')}</div>
-                    <div class="record-card-amount">¥${Number(r.amount||0).toFixed(2)}</div>
+                    <div class="record-card-amount">¥${totalAmt.toFixed(2)}</div>
                   </div>
+                  <div style="font-size:12px;color:var(--muted);">单价 ¥${unitPrice.toFixed(2)} × ${r.quantity||0}</div>
                   <div class="record-card-tags">
                     <span class="tag" onclick="filterByTag('category','${escapeHtml(r.category||'')}')">${escapeHtml(r.category||'-')}</span>
                     <span class="tag tag-green" onclick="filterByTag('purpose','${escapeHtml(r.purpose||'')}')">${escapeHtml(r.purpose||'-')}</span>
@@ -3068,7 +3121,7 @@
                 <div><span class="rc-label">店铺</span>${escapeHtml(r.shop||'-')}</div>
                 <div><span class="rc-label">付款</span>${escapeHtml(r.paymentMethod||'-')}</div>
                 <div><span class="rc-label">日期</span>${escapeHtml(r.date||'-')}</div>
-                <div style="grid-column:span 2;"><span class="rc-label">备注</span>${escapeHtml(r.notes||'-')} ${linkHtml}</div>
+                <div style="grid-column:span 2;"><span class="rc-label">备注</span>${escapeHtml(r.notes||'-')} ${r.link ? `<a href="${r.link}" target="_blank">🔗</a>` : ''}</div>
                 ${r.groupNumber ? `<div style="grid-column:span 2;"><span class="rc-label">群号</span>${escapeHtml(r.groupNumber)}</div>` : ''}
               </div>
               <div class="record-card-actions">
@@ -3107,7 +3160,7 @@
                 const item = map[name];
                 const li = document.createElement('li');
                 li.innerHTML =
-                    `<strong>${escapeHtml(name)}</strong><br>金额：${item.amount.toFixed(2)}，数量：${item.qty}，记录：${item.count} 条`;
+                    `<strong>${escapeHtml(name)}</strong><br>总金额：${item.amount.toFixed(2)}，数量：${item.qty}，记录：${item.count} 条`;
                 ul.appendChild(li);
             });
         }
@@ -3326,7 +3379,7 @@
 
         function exportCsvWithImages(recordsToExport) {
             const zip = new JSZip();
-            const headers = ['日期', '项目', '分类', '商品类别', '金额', '数量', '平台', '店铺', '付款方式', '用途', '状态', '群号', '链接',
+            const headers = ['日期', '项目', '分类', '商品类别', '单价', '数量', '总价', '平台', '店铺', '付款方式', '用途', '状态', '群号', '链接',
                 '备注', '图片文件名'
             ];
             const rows = recordsToExport.map((r, idx) => {
@@ -3342,13 +3395,16 @@
                     const blob = new Blob([ab], { type: 'image/png' });
                     zip.file(imgName, blob);
                 }
+                const unitPrice = getUnitPrice(r);
+                const totalAmt = getTotalAmount(r);
                 return [
                     r.date || '',
                     r.productName || '',
                     r.category || '',
                     r.productCategory || '',
-                    Number(r.amount || 0).toFixed(2),
+                    unitPrice.toFixed(2),
                     r.quantity || 0,
+                    totalAmt.toFixed(2),
                     r.platform || '',
                     r.shop || '',
                     r.paymentMethod || '',
@@ -3401,7 +3457,7 @@
         }
 
         // ============================================================
-        // 小票导出（最终修复版）
+        // 小票导出（最终修复版 - 使用flex布局确保内容完整）
         // ============================================================
         let receiptData = [];
         let receiptIndex = 0;
@@ -3430,8 +3486,8 @@
 
             const name = r.productName || '未命名项目';
             const qty = r.quantity || 0;
-            const amount = Number(r.amount) || 0;
-            const unitPrice = qty > 0 ? amount / qty : amount;
+            const unitPrice = getUnitPrice(r);
+            const totalAmt = getTotalAmount(r);
 
             const fieldMap = {
                 date: { label: '日期', value: formatDateChinese(r.date) },
@@ -3451,34 +3507,25 @@
                 }
             }
 
-            // 图片（独立于表格，不压缩）
+            // 图片：限制最大高度以保证表格可见，但不会太小
             const imageHtml = (showReceiptImage && r.imageData) ?
                 `<div class="receipt-img"><img src="${r.imageData}" alt="预览图" /></div>` :
                 '';
 
-            // 表格：强制宽度100%，三列等宽
+            // 使用flex布局代替table，保证行高自适应，内容完整显示
             const tableHtml = `
-            <table class="receipt-table" style="width:100% !important; table-layout:fixed !important; min-width:0 !important;">
-              <colgroup>
-                <col style="width:33.33%;">
-                <col style="width:33.33%;">
-                <col style="width:33.33%;">
-              </colgroup>
-              <thead>
-                <tr>
-                  <th style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:2px dashed #ccc; font-weight:700;">项目名称</th>
-                  <th style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:2px dashed #ccc; font-weight:700;">份数</th>
-                  <th style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:2px dashed #ccc; font-weight:700;">单价</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr>
-                  <td style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:1px dashed #ddd; word-break:break-word; overflow-wrap:break-word; hyphens:auto;">${escapeHtml(name)}</td>
-                  <td style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:1px dashed #ddd;">×${qty}</td>
-                  <td style="width:33.33%; text-align:center; padding:6px 4px; border-bottom:1px dashed #ddd;">¥${unitPrice.toFixed(2)}</td>
-                </tr>
-              </tbody>
-            </table>
+            <div class="receipt-table-flex">
+              <div class="receipt-row header">
+                <div class="receipt-cell">项目名称</div>
+                <div class="receipt-cell">数量</div>
+                <div class="receipt-cell">单价</div>
+              </div>
+              <div class="receipt-row">
+                <div class="receipt-cell">${escapeHtml(name)}</div>
+                <div class="receipt-cell">×${qty}</div>
+                <div class="receipt-cell">¥${unitPrice.toFixed(2)}</div>
+              </div>
+            </div>
           `;
 
             let html = `
@@ -3501,8 +3548,8 @@
             <div class="receipt-divider"></div>
 
             <div class="receipt-total">
-              <span>合计</span>
-              <span>¥${amount.toFixed(2)}</span>
+              <span>合计（总价）</span>
+              <span>¥${totalAmt.toFixed(2)}</span>
             </div>
 
             ${imageHtml}
@@ -3675,7 +3722,8 @@
                         const nameIdx = headers.indexOf('项目');
                         const catIdx = headers.indexOf('分类');
                         const pcatIdx = headers.indexOf('商品类别');
-                        const amtIdx = headers.indexOf('金额');
+                        const unitPriceIdx = headers.indexOf('单价');
+                        const totalIdx = headers.indexOf('总价');
                         const qtyIdx = headers.indexOf('数量');
                         const platIdx = headers.indexOf('平台');
                         const shopIdx = headers.indexOf('店铺');
@@ -3689,14 +3737,18 @@
                         for (let i = 1; i < lines.length; i++) {
                             const cols = lines[i].split(',').map(c => c.replace(/^"|"$/g, ''));
                             const get = (idx) => (idx >= 0 && idx < cols.length) ? cols[idx] : '';
+                            const unitPrice = parseFloat(get(unitPriceIdx)) || 0;
+                            const qty = parseInt(get(qtyIdx)) || 1;
+                            const totalAmt = parseFloat(get(totalIdx)) || (unitPrice * qty);
                             const record = {
                                 id: Date.now() + i,
                                 date: get(dateIdx),
                                 productName: get(nameIdx),
                                 category: get(catIdx),
                                 productCategory: get(pcatIdx),
-                                amount: parseFloat(get(amtIdx)) || 0,
-                                quantity: parseInt(get(qtyIdx)) || 1,
+                                unitPrice: unitPrice,
+                                amount: totalAmt,
+                                quantity: qty,
                                 platform: get(platIdx),
                                 shop: get(shopIdx),
                                 paymentMethod: get(payIdx),
@@ -3849,6 +3901,8 @@
             });
             const toggleBtn = document.getElementById('toggleImageBtn');
             if (toggleBtn) toggleBtn.textContent = '🖼️ 隐藏图片';
+            // 初始化总价
+            calculateTotal();
             console.log('📒 L的记账本 已加载，共 ' + records.length + ' 条记录');
         });
 
@@ -3895,6 +3949,9 @@
         window.applyFilters = applyFilters;
         window.clearFilters = clearFilters;
         window.filterByTag = filterByTag;
+        window.calculateTotal = calculateTotal;
+        window.getUnitPrice = getUnitPrice;
+        window.getTotalAmount = getTotalAmount;
     </script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer>
     </script>
